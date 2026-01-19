@@ -1,0 +1,180 @@
+/* Reset minimalista */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    background: #0a0a0a;
+    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Chat container - Design minimalista e escuro */
+#chatbox {
+    width: 100%;
+    max-width: 500px;
+    height: 700px;
+    background: #111;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #222;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Header elegante */
+#header {
+    padding: 24px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border-bottom: 1px solid #222;
+    text-align: center;
+}
+
+#header h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+#header p {
+    color: #888;
+    font-size: 0.9rem;
+    margin-top: 4px;
+}
+
+/* Área de mensagens */
+#messages {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Mensagens - Design limpo */
+.message {
+    padding: 12px 16px;
+    border-radius: 18px;
+    max-width: 80%;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.user {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 6px;
+}
+
+.bot {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    margin-right: auto;
+    border-bottom-left-radius: 6px;
+    border: 1px solid #222;
+}
+
+/* Área de input */
+#input-area {
+    padding: 20px 24px;
+    background: #111;
+    border-top: 1px solid #222;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+#userInput {
+    flex: 1;
+    padding: 14px 18px;
+    background: #1a1a1a;
+    border: 1px solid #222;
+    border-radius: 16px;
+    color: white;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+#userInput:focus {
+    border-color: #3b82f6;
+    background: #0a0a0a;
+}
+
+#userInput::placeholder {
+    color: #666;
+}
+
+/* Botão minimalista */
+button {
+    padding: 14px 20px;
+    background: #1a1a1a;
+    color: white;
+    border: 1px solid #222;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+}
+
+/* Scrollbar minimalista */
+#messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+#messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#messages::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    body {
+        padding: 0;
+        background: #0a0a0a;
+    }
+    
+    #chatbox {
+        border-radius: 0;
+        height: 100vh;
+        max-width: none;
+        border: none;
+        box-shadow: none;
+    }
+    
+    #messages {
+        padding: 20px;
+    }
+    
+    .message {
+        max-width: 85%;
+    }
+}
