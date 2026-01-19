@@ -12,7 +12,7 @@ function addMessage(sender, text) {
 
 // Chama a API da OpenRouter
 async function getBotResponseFromOpenRouter(message) {
-    const apiKey = "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";
+    const apiKey = "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";
     const baseUrl = "https://openrouter.ai/api/v1";
 
     try {
