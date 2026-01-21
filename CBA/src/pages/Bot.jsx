@@ -18,11 +18,11 @@ export default function Bot() {
   };
 
   const getBotResponseFromOpenRouter = async (message) => {
-    // CORREÇÃO: A mensagem de erro agora corresponde ao nome da variável
-    const apiKey = import.meta.env.CHAVE_DO_JORGE || import.meta.env.VITE_OPENROUTER_API_KEY;
+    
+    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
     
     if (!apiKey) {
-      // CORREÇÃO: Mudei a mensagem para mencionar CHAVE_DO_JORGE
+    
       return "Erro: Chave da API não configurada. Configure a variável CHAVE_DO_JORGE no Vercel (Environment Variables)";
     }
 
@@ -56,28 +56,28 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
       return data.choices[0].message.content.trim();
     } catch (error) {
       console.error("Erro na API:", error);
-      return "Desculpe, houve um problema ao conectar com o assistente. Pode tentar de novo? 😊";
+      return "Desculpe, houve um problema ao conectar com o assistente. Pode tentar de novo? ";
     }
   };
 
-  // Respostas locais rápidas + API
+  
   const getBotResponse = async (message) => {
     const lower = message.toLowerCase();
 
     if (lower.includes('oi') || lower.includes('olá') || lower.includes('ola')) {
-      return 'Olá! Como você está se sentindo hoje? Estou aqui para ajudar com calma. 😊';
+      return 'Olá! Como você está se sentindo hoje? Estou aqui para ajudar com calma.';
     }
     if (lower.includes('ansiedade') || lower.includes('estresse') || lower.includes('sobrecarga')) {
       return 'Entendo, ansiedade pode ser desafiadora. Vamos tentar respirar juntos: inspire contando até 4, segure por 4, expire por 4. Quer repetir ou mais dicas?';
     }
     if (lower.includes('triste') || lower.includes('deprimido') || lower.includes('chateado')) {
-      return 'Sinto muito que você esteja se sentindo assim. É normal ter dias difíceis. Quer falar sobre o que está acontecendo? Estou aqui para ouvir. 💙';
+      return 'Sinto muito que você esteja se sentindo assim. É normal ter dias difíceis. Quer falar sobre o que está acontecendo? Estou aqui para ouvir.';
     }
     if (lower.includes('como você está') || lower.includes('tudo bem')) {
       return 'Estou bem, obrigado por perguntar! Meu objetivo é ajudar você a se sentir melhor. Como está o seu dia?';
     }
     if (lower.includes('obrigado') || lower.includes('obrigada') || lower.includes('thanks')) {
-      return 'De nada! Fico feliz em poder ajudar. Estou aqui sempre que precisar. 😊';
+      return 'De nada! Fico feliz em poder ajudar. Estou aqui sempre que precisar.';
     }
     if (lower.includes('ajuda') || lower.includes('socorro') || lower.includes('emergência')) {
       return 'Se você está em crise ou precisa de ajuda imediata, por favor entre em contato com: Centro de Valorização da Vida (CVV) - 188 (ligação gratuita 24h). Estou aqui para conversar também.';
@@ -89,10 +89,10 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
       return 'Rotinas podem ser muito úteis! Que tal criar uma lista simples das suas atividades do dia? Podemos começar com 3 tarefas pequenas. Quer tentar?';
     }
     if (lower.includes('nome') || lower.includes('chamas')) {
-      return 'Meu nome é Tino! Sou um chatbot criado pelo Engenheiro Jorge Gouveia Tanguila para oferecer suporte emocional. 😊';
+      return 'Meu nome é Tino! Sou um chatbot criado pelo Engenheiro Jorge Gouveia Tanguila para oferecer suporte emocional.';
     }
 
-    // Se não for resposta local → usa API
+
     return await getBotResponseFromOpenRouter(message);
   };
 
@@ -116,13 +116,13 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
     }
 
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'pt-BR'; // Mudei para pt-BR (mais comum)
+    recognition.lang = 'pt-BR'; 
     recognition.interimResults = false;
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInputValue(transcript);
-      // Pequeno delay para melhor UX
+      
       setTimeout(() => {
         sendMessage();
       }, 300);
@@ -136,7 +136,6 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
     recognition.start();
   };
 
-  // Enviar com Enter
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       sendMessage();
