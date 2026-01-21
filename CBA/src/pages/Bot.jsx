@@ -21,7 +21,7 @@ export default function Bot() {
     //const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY; 
     const apiKey = import.meta.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return "Erro: Chave da API não configurada. Configure a variável VITE_OPENROUTER_API_KEY no .env";
+      return "Erro: Chave da API não configurada. Configure a variável OPENROUTER_API_KEY no .env";
     }
 
     try {
