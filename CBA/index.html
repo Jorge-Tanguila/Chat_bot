@@ -1,29 +1,19 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot para Autistas</title>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Para ícones (opcional, Google Material Icons) -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-</head>
-<body>
-    <div id="chatbox">
-        <div id="header">
-            <h2>Chatbot de Suporte para Autistas</h2>
-            <p>Olá! Estou aqui para ajudar com conversas, emoções e rotinas. Não substituo um profissional.</p>
-        </div>
-        <div id="messages"></div>
-        <div id="input-area">
-            <input type="text" id="userInput" placeholder="Digite sua mensagem...">
-            <button onclick="sendMessage()"><i class="material-icons">send</i></button>
-            <button onclick="toggleVoice()"><i class="material-icons">mic</i></button> <!-- Botão de voz -->
-        </div>
-    </div>
-    <script src="script.js"></script>
-</body>
+    <title>bot</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
