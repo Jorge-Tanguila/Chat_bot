@@ -18,9 +18,12 @@ export default function Bot() {
   };
 
   const getBotResponseFromOpenRouter = async (message) => {
-    const apiKey = import.meta.env.CHAVE_DO_JORGE;
+    // CORREÇÃO: A mensagem de erro agora corresponde ao nome da variável
+    const apiKey = import.meta.env.CHAVE_DO_JORGE || import.meta.env.VITE_OPENROUTER_API_KEY;
+    
     if (!apiKey) {
-      return "Erro: Chave da API não configurada. Configure a variável OPENROUTER_API_KEY no .env";
+      // CORREÇÃO: Mudei a mensagem para mencionar CHAVE_DO_JORGE
+      return "Erro: Chave da API não configurada. Configure a variável CHAVE_DO_JORGE no Vercel (Environment Variables)";
     }
 
     try {
@@ -61,13 +64,33 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
   const getBotResponse = async (message) => {
     const lower = message.toLowerCase();
 
-    if (lower.includes('oi') || lower.includes('olá')) {
+    if (lower.includes('oi') || lower.includes('olá') || lower.includes('ola')) {
       return 'Olá! Como você está se sentindo hoje? Estou aqui para ajudar com calma. 😊';
     }
     if (lower.includes('ansiedade') || lower.includes('estresse') || lower.includes('sobrecarga')) {
       return 'Entendo, ansiedade pode ser desafiadora. Vamos tentar respirar juntos: inspire contando até 4, segure por 4, expire por 4. Quer repetir ou mais dicas?';
     }
-    // ... adicione os outros ifs que você tinha
+    if (lower.includes('triste') || lower.includes('deprimido') || lower.includes('chateado')) {
+      return 'Sinto muito que você esteja se sentindo assim. É normal ter dias difíceis. Quer falar sobre o que está acontecendo? Estou aqui para ouvir. 💙';
+    }
+    if (lower.includes('como você está') || lower.includes('tudo bem')) {
+      return 'Estou bem, obrigado por perguntar! Meu objetivo é ajudar você a se sentir melhor. Como está o seu dia?';
+    }
+    if (lower.includes('obrigado') || lower.includes('obrigada') || lower.includes('thanks')) {
+      return 'De nada! Fico feliz em poder ajudar. Estou aqui sempre que precisar. 😊';
+    }
+    if (lower.includes('ajuda') || lower.includes('socorro') || lower.includes('emergência')) {
+      return 'Se você está em crise ou precisa de ajuda imediata, por favor entre em contato com: Centro de Valorização da Vida (CVV) - 188 (ligação gratuita 24h). Estou aqui para conversar também.';
+    }
+    if (lower.includes('calmo') || lower.includes('acalmar') || lower.includes('respirar')) {
+      return 'Vamos fazer um exercício de respiração: inspire lentamente pelo nariz (1...2...3...4), segure (1...2...3...4), expire pela boca (1...2...3...4). Repita quantas vezes quiser.';
+    }
+    if (lower.includes('rotina') || lower.includes('organizar') || lower.includes('horário')) {
+      return 'Rotinas podem ser muito úteis! Que tal criar uma lista simples das suas atividades do dia? Podemos começar com 3 tarefas pequenas. Quer tentar?';
+    }
+    if (lower.includes('nome') || lower.includes('chamas')) {
+      return 'Meu nome é Tino! Sou um chatbot criado pelo Engenheiro Jorge Gouveia Tanguila para oferecer suporte emocional. 😊';
+    }
 
     // Se não for resposta local → usa API
     return await getBotResponseFromOpenRouter(message);
@@ -93,13 +116,16 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
     }
 
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'pt-PT'; // ou 'pt-BR' dependendo do sotaque desejado
+    recognition.lang = 'pt-BR'; // Mudei para pt-BR (mais comum)
     recognition.interimResults = false;
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInputValue(transcript);
-      sendMessage(); // envia automaticamente
+      // Pequeno delay para melhor UX
+      setTimeout(() => {
+        sendMessage();
+      }, 300);
     };
 
     recognition.onerror = (event) => {
@@ -141,7 +167,7 @@ Seu criador é o Engenheiro Jorge Gouveia Tanguila... (coloque aqui todo o promp
           <input
             type="text"
             id="userInput"
-            placeholder="Digite sua mensagem..."
+            placeholder="Digite sua mensagem ou clique no microfone..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
