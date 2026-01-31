@@ -141,10 +141,10 @@ button:hover {
 
 /* Mobile */
 @media (max-width: 600px) {
-    /*body {
+    body {
         padding: 0;
         background: #0a0a0a;
-    }*/
+    }
     
     #chatbox {
         border-radius: 0;
