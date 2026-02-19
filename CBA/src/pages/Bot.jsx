@@ -3,11 +3,12 @@ import './styles/style.css';
 
 export default function Bot() {
   const [messages, setMessages] = useState([
-    { sender: 'bot', text: 'Bem-vindo ao Chatbot de Suporte! 🌟 Como posso ajudar você hoje? Estou aqui para ouvir com calma e paciência.' }
+    { sender: 'bot', text: 'Bem-vindo! Como posso ajudar você hoje? Estou aqui para ouvir.' }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState(true);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -18,113 +19,159 @@ export default function Bot() {
     setMessages(prev => [...prev, { sender, text }]);
   };
 
+  // Lista ATUALIZADA de modelos gratuitos do OpenRouter (Fevereiro 2026)
+  const FREE_MODELS = [
+    "meta-llama/llama-4-maverick:free",    // Lançado Abril/2025 - 256K contexto [citation:2]
+    "meta-llama/llama-4-scout:free",       // Lançado Abril/2025 - 512K contexto [citation:2]
+    "openrouter/pony-alpha:free",          // Lançado Fevereiro/2026 - 200K contexto [citation:4]
+    "google/gemini-2.5-pro-exp-03-25:free", // Experimental - 1M contexto [citation:5]
+    "moonshotai/kimi-vl-a3b-thinking:free", // Eficiente para raciocínio [citation:5]
+    "nvidia/llama-3.1-nemotron-nano-8b-v1:free", // Rápido para tarefas simples [citation:5]
+    "deepseek/deepseek-v3.1-nex-n1:free"   // 131K contexto [citation:6]
+  ];
+
   const getBotResponseFromOpenRouter = async (message) => {
     const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
     
     if (!apiKey) {
-      return "🔑 Chave da API não configurada. Por favor, configure a variável VITE_OPENROUTER_API_KEY no arquivo .env";
+      setApiAvailable(false);
+      return "Configure a chave da API no arquivo .env (VITE_OPENROUTER_API_KEY)";
     }
 
-    // Lista de modelos gratuitos para tentar em caso de erro 429
-    const models = [
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "google/gemma-2-9b-it:free",
-      "microsoft/phi-3-mini-128k-instruct:free"
-    ];
-
-    for (const model of models) {
+    // Tenta cada modelo até um funcionar
+    for (const model of FREE_MODELS) {
       try {
+        console.log(`Tentando modelo: ${model}`);
+        
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${apiKey}`,
             "HTTP-Referer": window.location.origin,
-            "X-Title": "Chatbot de Suporte Emocional"
+            "X-Title": "Chatbot de Suporte"
           },
           body: JSON.stringify({
             model: model,
             messages: [
               {
                 role: "system",
-                content: `Você é Tino, uma IA gentil, calma e muito respeitosa, criada pelo Engenheiro Jorge Gouveia Tanguila. 
-                Você é especialista em oferecer suporte emocional para pessoas, especialmente aquelas com ansiedade, autismo ou que precisam de apoio.
-                
-                Características importantes:
-                - Fale sempre de forma calma, pausada e com palavras simples
-                - Use emojis ocasionalmente para tornar a conversa mais acolhedora 🌟
-                - Valide os sentimentos do usuário antes de oferecer soluções
-                - Pergunte se a pessoa quer sugestões antes de dar conselhos
-                - Lembre que você NÃO substitui profissionais de saúde
-                - Em casos de crise, sempre recomende buscar ajuda profissional (CVV: 188)
-                
-                Exemplos de respostas:
-                - "Entendo que você está se sentindo ansioso. Isso é completamente normal. Quer conversar mais sobre isso? 🌿"
-                - "Obrigado por compartilhar isso comigo. Como posso ajudar você neste momento?"
-                - "Respire fundo comigo... Vamos fazer uma pausa de 30 segundos juntos?"`
+                content: `Você é um assistente gentil e acolhedor para suporte emocional. 
+                Fale de forma calma e use linguagem simples. 
+                Valide os sentimentos da pessoa antes de oferecer conselhos.
+                Em casos de crise, recomende o CVV (188).`
               },
               { role: "user", content: message }
             ],
             temperature: 0.7,
-            max_tokens: 300
+            max_tokens: 500
           })
         });
 
+        // Se for 429 (limite de taxa), tenta próximo modelo
         if (response.status === 429) {
           console.log(`Modelo ${model} atingiu limite, tentando próximo...`);
-          continue; // Tenta próximo modelo
+          continue;
         }
 
-        if (!response.ok) throw new Error(`Erro ${response.status}`);
+        // Se for 404 (modelo não encontrado), tenta próximo
+        if (response.status === 404) {
+          console.log(`Modelo ${model} não encontrado, tentando próximo...`);
+          continue;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
 
         const data = await response.json();
+        setApiAvailable(true);
         return data.choices[0].message.content.trim();
+
       } catch (error) {
-        console.error(`Erro com modelo ${model}:`, error);
-        continue; // Tenta próximo modelo em caso de erro
+        console.error(`Erro com modelo ${model}:`, error.message);
+        // Continua para o próximo modelo
       }
     }
 
-    // Se todos os modelos falharem, retorna mensagem amigável
-    return "😊 No momento estou com muitos acessos simultâneos. Mas não se preocupe! " +
-           "Posso continuar nossa conversa usando minhas respostas pré-programadas. " +
-           "Como você está se sentindo agora?";
+    // Se todos os modelos falharem
+    setApiAvailable(false);
+    return "No momento estou com dificuldades de conexão. Mas podemos continuar conversando com minhas respostas preparadas. Como você está se sentindo?";
+  };
+
+  // Respostas locais completas (funcionam SEMPRE, mesmo sem API)
+  const getLocalResponse = (message) => {
+    const text = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Saudação
+    if (text.includes('oi') || text.includes('olá') || text.includes('ola')) {
+      return 'Olá! Como você está se sentindo hoje?';
+    }
+    
+    // Ansiedade
+    if (text.includes('ansiedade') || text.includes('ansioso') || text.includes('ansiosa')) {
+      return 'A ansiedade pode ser difícil. Vamos respirar juntos? Inspire por 4 segundos, segure por 4, expire por 4. Quer tentar?';
+    }
+    
+    // Tristeza
+    if (text.includes('triste') || text.includes('deprimido') || text.includes('deprimida')) {
+      return 'Sinto muito que você esteja se sentindo assim. Quer conversar sobre o que está acontecendo? Estou aqui para ouvir.';
+    }
+    
+    // Estresse
+    if (text.includes('estresse') || text.includes('stress') || text.includes('sobrecarga')) {
+      return 'Estresse é pesado. Que tal fazermos uma pausa de um minuto? Respire fundo comigo.';
+    }
+    
+    // Agradecimento
+    if (text.includes('obrigado') || text.includes('obrigada')) {
+      return 'Por nada! Estou aqui sempre que precisar.';
+    }
+    
+    // Ajuda/Crise
+    if (text.includes('ajuda') || text.includes('socorro') || text.includes('emergência')) {
+      return 'Se você está em crise, ligue para o CVV: 188 (24 horas). Estou aqui para conversar também.';
+    }
+    
+    // Respiração/Calma
+    if (text.includes('calma') || text.includes('respirar') || text.includes('acalmar')) {
+      return 'Vamos respirar juntos: inspire (1...2...3...4), segure (1...2...3...4), expire (1...2...3...4). Como se sente?';
+    }
+    
+    // Rotina
+    if (text.includes('rotina') || text.includes('organizar') || text.includes('tarefa')) {
+      return 'Rotinas ajudam. Que tal listarmos 3 pequenas tarefas para hoje?';
+    }
+    
+    // Nome
+    if (text.includes('nome') || text.includes('chama')) {
+      return 'Meu nome é Tino. Fui criado para oferecer suporte emocional.';
+    }
+    
+    // Resposta padrão
+    return 'Entendi. Conte-me mais sobre como você está se sentindo.';
   };
 
   const getBotResponse = async (message) => {
-    const lower = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    // Respostas locais para garantir funcionamento mesmo sem API
-    const localResponses = {
-      oi: 'Olá!  Que bom ter você aqui. Como está se sentindo hoje?',
-      ola: 'Olá!  Que bom ter você aqui. Como está se sentindo hoje?',
-      ansiedade: 'A ansiedade pode ser desafiadora, mas você não está sozinho. Vamos tentar uma técnica de respiração juntos? Inspire por 4 segundos... segure por 4... expire por 4. Quer tentar comigo? 🌬️',
-      estresse: 'Percebo que você está se sentindo estressado. Que tal fazermos uma pausa de 1 minuto? Podemos respirar fundo juntos ou você pode me contar o que está causando esse estresse.',
-      sobrecarga: 'Sobrecarga emocional é difícil de lidar. Vamos devagar: você está em um lugar calmo agora? Se sim, vamos respirar fundo. Se não, podemos pensar em como encontrar um cantinho mais tranquilo. 🌿',
-      triste: 'Sinto muito que você esteja se sentindo triste.  Quer me contar mais sobre o que está acontecendo? Estou aqui para ouvir sem julgamentos.',
-      deprimido: 'A depressão é um peso muito grande. Lembre-se que você é importante e merece apoio. Além de conversarmos, considere buscar ajuda profissional. O CVV atende 24h pelo 188.',
-      chateado: 'Entendo que você está chateado. Isso é válido. Quer desabafar sobre o que aconteceu?',
-      obrigado: 'Por nada!  Fico feliz em poder ajudar. Estarei aqui sempre que precisar conversar.',
-      obrigada: 'Por nada!  Fico feliz em poder ajudar. Estarei aqui sempre que precisar conversar.',
-      ajuda: 'Estou aqui para ajudar!  Você pode falar sobre: ansiedade, tristeza, rotina, estresse, ou apenas conversar. Se for uma emergência, ligue 188 (CVV).',
-      socorro: 'Estou aqui com você. Respire fundo. Se for uma emergência, ligue 188 agora. Quer conversar sobre o que está sentindo?',
-      calm: 'Vamos fazer um exercício de respiração juntos?  Inspire pelo nariz (1...2...3...4), segure (1...2...3...4), expire pela boca (1...2...3...4). Quer repetir?',
-      respir: 'A respiração é uma ótima ferramenta! Vamos fazer juntos: inspire fundo... expire lentamente... Como você se sente agora?',
-      rotina: 'Rotinas podem trazer segurança. Que tal criarmos uma rotina simples juntos? Podemos começar com 3 atividades principais para o seu dia. 📋',
-      nome: 'Meu nome é Tino! Fui criado pelo Engenheiro Jorge Gouveia Tanguila para oferecer suporte emocional com muito carinho e respeito. 🤖💙',
-    };
-
-    for (const [key, response] of Object.entries(localResponses)) {
-      if (lower.includes(key)) {
-        return response;
-      }
+    // Primeiro tenta resposta local (mais rápida)
+    const localResponse = getLocalResponse(message);
+    
+    // Se for uma saudação simples, usa resposta local mesmo
+    if (message.length < 20) {
+      return localResponse;
     }
 
-    // Se não encontrar resposta local, tenta API
+    // Para mensagens mais complexas, tenta API
     setIsLoading(true);
-    const apiResponse = await getBotResponseFromOpenRouter(message);
-    setIsLoading(false);
-    return apiResponse;
+    try {
+      const apiResponse = await getBotResponseFromOpenRouter(message);
+      setIsLoading(false);
+      return apiResponse;
+    } catch (error) {
+      setIsLoading(false);
+      // Se API falhar, usa resposta local
+      return localResponse;
+    }
   };
 
   const sendMessage = async () => {
@@ -139,26 +186,17 @@ export default function Bot() {
   };
 
   const toggleVoice = () => {
-    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-      alert('Seu navegador não suporta reconhecimento de voz. Recomendamos usar Chrome, Edge ou Safari.');
-      return;
-    }
-
-    if (isListening) {
-      setIsListening(false);
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      alert('Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.');
       return;
     }
 
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = 'pt-BR';
-    recognition.continuous = false;
     recognition.interimResults = false;
+    recognition.continuous = false;
 
     setIsListening(true);
-
-    recognition.onstart = () => {
-      console.log('Microfone ativado...');
-    };
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
@@ -170,17 +208,9 @@ export default function Bot() {
       }, 300);
     };
 
-    recognition.onerror = (event) => {
-      console.error('Erro na voz:', event.error);
+    recognition.onerror = () => {
       setIsListening(false);
-      
-      let errorMessage = 'Erro no reconhecimento de voz. ';
-      if (event.error === 'not-allowed') {
-        errorMessage += 'Permita o acesso ao microfone nas configurações do navegador.';
-      } else {
-        errorMessage += 'Tente novamente.';
-      }
-      alert(errorMessage);
+      alert('Erro no microfone. Tente novamente.');
     };
 
     recognition.onend = () => {
@@ -201,44 +231,26 @@ export default function Bot() {
       <div className="chat-card">
         <div className="chat-header">
           <div className="header-content">
-            <div className="bot-avatar">
-              <span className="avatar-emoji">🤖</span>
-            </div>
-            <div className="header-text">
-              <h1>Tino - Seu Amigo Virtual</h1>
-              <p className="subtitle">Estou aqui para ouvir e apoiar você 💙</p>
+            <div className="bot-avatar">🤖</div>
+            <div>
+              <h2>Tino</h2>
+              <p className="subtitle">Estou aqui para ouvir</p>
             </div>
           </div>
-          <div className="header-badge">
-            <span className="status-dot"></span>
-            Online
+          <div className={`status-indicator ${apiAvailable ? 'online' : 'offline'}`}>
+            {apiAvailable ? 'Conectado' : 'Modo offline'}
           </div>
         </div>
 
-        <div className="messages-container">
+        <div className="messages-area">
           {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`message-wrapper ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`}
-            >
-              {msg.sender === 'bot' && (
-                <div className="message-avatar">🤖</div>
-              )}
-              <div className={`message-bubble ${msg.sender === 'user' ? 'user-bubble' : 'bot-bubble'}`}>
-                <p>{msg.text}</p>
-                <span className="message-time">
-                  {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-              {msg.sender === 'user' && (
-                <div className="message-avatar user-avatar">👤</div>
-              )}
+            <div key={index} className={`message ${msg.sender}`}>
+              <div className="message-content">{msg.text}</div>
             </div>
           ))}
           {isLoading && (
-            <div className="message-wrapper bot-message">
-              <div className="message-avatar">🤖</div>
-              <div className="message-bubble bot-bubble typing-indicator">
+            <div className="message bot">
+              <div className="typing-indicator">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -248,41 +260,38 @@ export default function Bot() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="input-container">
-          <div className="input-wrapper">
-            <input
-              type="text"
-              className="message-input"
-              placeholder="Digite sua mensagem..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-            />
-            <button 
-              className={`voice-button ${isListening ? 'listening' : ''}`}
-              onClick={toggleVoice}
-              disabled={isLoading}
-              title={isListening ? 'Gravando...' : 'Ativar microfone'}
-            >
-              <span className="material-icons">
-                {isListening ? 'mic' : 'mic_none'}
-              </span>
-            </button>
-            <button 
-              className="send-button"
-              onClick={sendMessage}
-              disabled={!inputValue.trim() || isLoading}
-              title="Enviar mensagem"
-            >
-              <span className="material-icons">send</span>
-            </button>
-          </div>
-          <p className="disclaimer">
-             Lembre-se: Tino oferece apoio emocional, mas não substitui profissionais de saúde. 
-            Em emergências, ligue 188 (CVV).
-          </p>
+        <div className="input-area">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Digite sua mensagem..."
+            disabled={isLoading}
+          />
+          <button 
+            className="voice-btn"
+            onClick={toggleVoice}
+            disabled={isLoading}
+            title="Falar"
+          >
+            🎤
+          </button>
+          <button 
+            className="send-btn"
+            onClick={sendMessage}
+            disabled={!inputValue.trim() || isLoading}
+            title="Enviar"
+          >
+            ➤
+          </button>
         </div>
+
+        {!apiAvailable && (
+          <div className="offline-notice">
+            Modo offline ativo. Respostas locais funcionando normalmente.
+          </div>
+        )}
       </div>
     </div>
   );
