@@ -3,12 +3,15 @@ import './styles/style.css';
 
 export default function Bot() {
   const [messages, setMessages] = useState([
-    { sender: 'bot', text: 'Bem-vindo! Como posso ajudar você hoje? Estou aqui para ouvir.' }
+    { 
+      sender: 'bot', 
+      text: 'Bem-vindo. Como posso ajudar você hoje? Estou aqui para ouvir.' 
+    }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [apiAvailable, setApiAvailable] = useState(true);
+  const [apiStatus, setApiStatus] = useState('connected'); // connected, connecting, disconnected
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -19,159 +22,97 @@ export default function Bot() {
     setMessages(prev => [...prev, { sender, text }]);
   };
 
-  // Lista ATUALIZADA de modelos gratuitos do OpenRouter (Fevereiro 2026)
-  const FREE_MODELS = [
-    "meta-llama/llama-4-maverick:free",    // Lançado Abril/2025 - 256K contexto [citation:2]
-    "meta-llama/llama-4-scout:free",       // Lançado Abril/2025 - 512K contexto [citation:2]
-    "openrouter/pony-alpha:free",          // Lançado Fevereiro/2026 - 200K contexto [citation:4]
-    "google/gemini-2.5-pro-exp-03-25:free", // Experimental - 1M contexto [citation:5]
-    "moonshotai/kimi-vl-a3b-thinking:free", // Eficiente para raciocínio [citation:5]
-    "nvidia/llama-3.1-nemotron-nano-8b-v1:free", // Rápido para tarefas simples [citation:5]
-    "deepseek/deepseek-v3.1-nex-n1:free"   // 131K contexto [citation:6]
-  ];
-
-  const getBotResponseFromOpenRouter = async (message) => {
-    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  const getBotResponse = async (message) => {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     
     if (!apiKey) {
-      setApiAvailable(false);
-      return "Configure a chave da API no arquivo .env (VITE_OPENROUTER_API_KEY)";
+      setApiStatus('disconnected');
+      return "A chave da API não está configurada. Por favor, configure a variável VITE_GROQ_API_KEY no arquivo .env";
     }
 
-    // Tenta cada modelo até um funcionar
-    for (const model of FREE_MODELS) {
+    // Lista de modelos em ordem de preferência
+    const models = [
+      "llama-3.3-70b-versatile",
+      "llama-4-scout-17b-16e-instruct",
+      "mixtral-8x7b-32768",
+      "llama-3.1-70b-versatile",
+      "gemma2-9b-it"
+    ];
+
+    setIsLoading(true);
+    setApiStatus('connecting');
+
+    for (const model of models) {
       try {
         console.log(`Tentando modelo: ${model}`);
         
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
-            "HTTP-Referer": window.location.origin,
-            "X-Title": "Chatbot de Suporte"
+            "Authorization": `Bearer ${apiKey}`
           },
           body: JSON.stringify({
             model: model,
             messages: [
               {
                 role: "system",
-                content: `Você é um assistente gentil e acolhedor para suporte emocional. 
-                Fale de forma calma e use linguagem simples. 
-                Valide os sentimentos da pessoa antes de oferecer conselhos.
-                Em casos de crise, recomende o CVV (188).`
-              },
-              { role: "user", content: message }
+                content: `Você é um assistente virtual desenvolvido por alunos do São Benedito chamado Enos, um assistente especializado em suporte emocional.
+
+                Suas características:
+                - Tom calmo, paciente e acolhedor
+                - Linguagem simples e direta
+                - Valida os sentimentos antes de oferecer soluções
+                - Pergunta como a pessoa está se sentindo
+                - Oferece técnicas de respiração quando apropriado
+                - Em casos de crise, recomenda o CVV (188)
+                - Não substitui profissionais de saúde
+                - Mantém a conversa fluindo naturalmente
+
+                Histórico recente:
+                ${messages.slice(-6).map(m => `${m.sender}: ${m.text}`).join('\n')}
+
+                Mensagem atual: ${message}`
+              }
             ],
             temperature: 0.7,
-            max_tokens: 500
+            max_tokens: 500,
+            top_p: 0.9
           })
         });
 
-        // Se for 429 (limite de taxa), tenta próximo modelo
         if (response.status === 429) {
           console.log(`Modelo ${model} atingiu limite, tentando próximo...`);
           continue;
         }
 
-        // Se for 404 (modelo não encontrado), tenta próximo
-        if (response.status === 404) {
-          console.log(`Modelo ${model} não encontrado, tentando próximo...`);
-          continue;
+        if (response.status === 401 || response.status === 403) {
+          setApiStatus('disconnected');
+          setIsLoading(false);
+          return "Erro de autenticação. Verifique sua chave de API.";
         }
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          continue;
         }
 
         const data = await response.json();
-        setApiAvailable(true);
-        return data.choices[0].message.content.trim();
+        
+        if (data.choices && data.choices[0]?.message?.content) {
+          setApiStatus('connected');
+          setIsLoading(false);
+          return data.choices[0].message.content.trim();
+        }
 
       } catch (error) {
-        console.error(`Erro com modelo ${model}:`, error.message);
-        // Continua para o próximo modelo
+        console.error(`Erro no modelo ${model}:`, error);
+        continue;
       }
     }
 
-    // Se todos os modelos falharem
-    setApiAvailable(false);
-    return "No momento estou com dificuldades de conexão. Mas podemos continuar conversando com minhas respostas preparadas. Como você está se sentindo?";
-  };
-
-  // Respostas locais completas (funcionam SEMPRE, mesmo sem API)
-  const getLocalResponse = (message) => {
-    const text = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    
-    // Saudação
-    if (text.includes('oi') || text.includes('olá') || text.includes('ola')) {
-      return 'Olá! Como você está se sentindo hoje?';
-    }
-    
-    // Ansiedade
-    if (text.includes('ansiedade') || text.includes('ansioso') || text.includes('ansiosa')) {
-      return 'A ansiedade pode ser difícil. Vamos respirar juntos? Inspire por 4 segundos, segure por 4, expire por 4. Quer tentar?';
-    }
-    
-    // Tristeza
-    if (text.includes('triste') || text.includes('deprimido') || text.includes('deprimida')) {
-      return 'Sinto muito que você esteja se sentindo assim. Quer conversar sobre o que está acontecendo? Estou aqui para ouvir.';
-    }
-    
-    // Estresse
-    if (text.includes('estresse') || text.includes('stress') || text.includes('sobrecarga')) {
-      return 'Estresse é pesado. Que tal fazermos uma pausa de um minuto? Respire fundo comigo.';
-    }
-    
-    // Agradecimento
-    if (text.includes('obrigado') || text.includes('obrigada')) {
-      return 'Por nada! Estou aqui sempre que precisar.';
-    }
-    
-    // Ajuda/Crise
-    if (text.includes('ajuda') || text.includes('socorro') || text.includes('emergência')) {
-      return 'Se você está em crise, ligue para o CVV: 188 (24 horas). Estou aqui para conversar também.';
-    }
-    
-    // Respiração/Calma
-    if (text.includes('calma') || text.includes('respirar') || text.includes('acalmar')) {
-      return 'Vamos respirar juntos: inspire (1...2...3...4), segure (1...2...3...4), expire (1...2...3...4). Como se sente?';
-    }
-    
-    // Rotina
-    if (text.includes('rotina') || text.includes('organizar') || text.includes('tarefa')) {
-      return 'Rotinas ajudam. Que tal listarmos 3 pequenas tarefas para hoje?';
-    }
-    
-    // Nome
-    if (text.includes('nome') || text.includes('chama')) {
-      return 'Meu nome é Tino. Fui criado para oferecer suporte emocional.';
-    }
-    
-    // Resposta padrão
-    return 'Entendi. Conte-me mais sobre como você está se sentindo.';
-  };
-
-  const getBotResponse = async (message) => {
-    // Primeiro tenta resposta local (mais rápida)
-    const localResponse = getLocalResponse(message);
-    
-    // Se for uma saudação simples, usa resposta local mesmo
-    if (message.length < 20) {
-      return localResponse;
-    }
-
-    // Para mensagens mais complexas, tenta API
-    setIsLoading(true);
-    try {
-      const apiResponse = await getBotResponseFromOpenRouter(message);
-      setIsLoading(false);
-      return apiResponse;
-    } catch (error) {
-      setIsLoading(false);
-      // Se API falhar, usa resposta local
-      return localResponse;
-    }
+    setApiStatus('disconnected');
+    setIsLoading(false);
+    return "Não foi possível conectar ao assistente no momento. Por favor, tente novamente mais tarde.";
   };
 
   const sendMessage = async () => {
@@ -187,7 +128,7 @@ export default function Bot() {
 
   const toggleVoice = () => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.');
+      alert('Seu navegador não suporta reconhecimento de voz. Recomendamos usar Chrome ou Edge.');
       return;
     }
 
@@ -210,7 +151,6 @@ export default function Bot() {
 
     recognition.onerror = () => {
       setIsListening(false);
-      alert('Erro no microfone. Tente novamente.');
     };
 
     recognition.onend = () => {
@@ -227,71 +167,94 @@ export default function Bot() {
   };
 
   return (
-    <div className="chat-container">
-      <div className="chat-card">
+    <div className="app">
+      <div className="chat">
         <div className="chat-header">
-          <div className="header-content">
-            <div className="bot-avatar">🤖</div>
-            <div>
-              <h2>Tino</h2>
-              <p className="subtitle">Estou aqui para ouvir</p>
-            </div>
+          <div className="chat-header-info">
+            <h1 className="chat-title">Enos</h1>
+            <p className="chat-subtitle">Suporte emocional</p>
           </div>
-          <div className={`status-indicator ${apiAvailable ? 'online' : 'offline'}`}>
-            {apiAvailable ? 'Conectado' : 'Modo offline'}
+          <div className={`chat-status chat-status-${apiStatus}`}>
+            {apiStatus === 'connected' && 'Conectado'}
+            {apiStatus === 'connecting' && 'Conectando...'}
+            {apiStatus === 'disconnected' && 'Offline'}
           </div>
         </div>
 
-        <div className="messages-area">
-          {messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.sender}`}>
-              <div className="message-content">{msg.text}</div>
+        <div className="messages">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`message message-${message.sender}`}
+            >
+              <div className="message-content">
+                {message.text}
+              </div>
+              <div className="message-time">
+                {new Date().toLocaleTimeString('pt-BR', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </div>
             </div>
           ))}
+          
           {isLoading && (
-            <div className="message bot">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div className="message message-bot">
+              <div className="typing">
+                <div className="typing-dot"></div>
+                <div className="typing-dot"></div>
+                <div className="typing-dot"></div>
               </div>
             </div>
           )}
+          
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="input-area">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Digite sua mensagem..."
-            disabled={isLoading}
-          />
-          <button 
-            className="voice-btn"
-            onClick={toggleVoice}
-            disabled={isLoading}
-            title="Falar"
-          >
-            🎤
-          </button>
-          <button 
-            className="send-btn"
-            onClick={sendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            title="Enviar"
-          >
-            ➤
-          </button>
-        </div>
-
-        {!apiAvailable && (
-          <div className="offline-notice">
-            Modo offline ativo. Respostas locais funcionando normalmente.
+        <div className="chat-footer">
+          <div className="input-container">
+            <input
+              type="text"
+              className="input-field"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Digite sua mensagem..."
+              disabled={isLoading}
+            />
+            <button
+              className={`input-button input-button-mic ${isListening ? 'input-button-mic-active' : ''}`}
+              onClick={toggleVoice}
+              disabled={isLoading}
+              aria-label="Ativar microfone"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 15.5C14.21 15.5 16 13.71 16 11.5V6C16 3.79 14.21 2 12 2C9.79 2 8 3.79 8 6V11.5C8 13.71 9.79 15.5 12 15.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4.35 9.65V11.35C4.35 15.57 7.78 19 12 19C16.22 19 19.65 15.57 19.65 11.35V9.65" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 22V19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button
+              className="input-button input-button-send"
+              onClick={sendMessage}
+              disabled={!inputValue.trim() || isLoading}
+              aria-label="Enviar mensagem"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </div>
-        )}
+          
+          <div className="disclaimer">
+            <p>
+              Se você estiver passando por uma crise, ligue para 112. 
+              Este é um suporte emocional e não substitui acompanhamento profissional.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
